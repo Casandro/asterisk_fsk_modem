@@ -4,7 +4,7 @@
 
 #include <stdint.h>
 
-#define MODULATOR_FSK_BLEN (1024)
+#define MODULATOR_FSK_BLEN (1024*16)
 
 typedef struct {
 	double phi;

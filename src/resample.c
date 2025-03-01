@@ -33,6 +33,7 @@ resampler_t *resampler_create(const int ifactor, const int ofactor, buffer_t *in
 	r->ofactor=ofactor;
 	r->ibuffer=in;
 	r->obuffer=out;
+	r->last_sample=0;
 	return r;
 }
 
@@ -58,12 +59,15 @@ int resampler_resample(resampler_t *r)
 		}
 		sum=sum/r->ifactor;
 		for (int m=0; m<r->ofactor; m++) {
-			int res=buffer_write(r->obuffer, sum);
+			double p=(m*1.0)/(r->ofactor*1.0); //trivial linear interpolation
+			double o=(1-p)*r->last_sample + p*sum;
+			int res=buffer_write(r->obuffer, o);
 			if (res==0) {
 				fprintf(stderr, "resampler_resample %p, buffer_write to %p failed\n", r, r->obuffer);
 				return 0;
 			}
 		}
+		r->last_sample=sum;
 	}
 	return 1;
 }

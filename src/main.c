@@ -3,6 +3,7 @@
 
 #include "buffer.h"
 #include "modulator_fsk.h"
+#include "demodulator_fsk.h"
 #include "resample.h"
 
 
@@ -16,7 +17,6 @@ int handle_data(uint8_t *data, const int len)
 void dump_buffer(buffer_t *b)
 {
 	int len=buffer_data(b);
-	printf("Length %d\n", len);
 	for (int n=0; n<len; n++) {
 		double v=0;
 		int res=buffer_read(b, &v);
@@ -35,17 +35,21 @@ void test()
 	buffer_t *modulated=buffer_create(1024);
 	buffer_t *modulated_8k=buffer_create(1024);
 	buffer_t *modulated_upsampled=buffer_create(1024);
+	buffer_t *demodulated=buffer_create(1024);
 	resampler_t *resampler_24k_8k=resampler_create(3, 1, modulated, modulated_8k);
 	resampler_t *resampler_8k_24k=resampler_create(1, 3, modulated_8k, modulated_upsampled);
 	modulator_fsk_t *modulator=modulator_fsk_create(24000, 1200, 1300, 2100, modulated);
-	modulator_fsk_queue_pause(modulator, 20);
+	demodulator_fsk_t *demodulator=demodulator_fsk_create(2400, modulated_upsampled, demodulated, 1300, 2100, 1500);
+	modulator_fsk_queue_pause(modulator, 600);
 	modulator_fsk_queue_break(modulator);
+	modulator_fsk_queue_pause(modulator, 600);
 	for (int n=32; n<127; n++) modulator_fsk_queue_byte(modulator, n);
 	for (int n=0; n<100; n++) {
 		modulator_fsk_modulate(modulator, buffer_space(modulated));
 		resampler_resample(resampler_24k_8k);
 		resampler_resample(resampler_8k_24k);
-		dump_buffer(modulated_upsampled);
+		demodulator_fsk_demod(demodulator);
+		dump_buffer(demodulated);
 	}
 }
 

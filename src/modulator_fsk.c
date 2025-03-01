@@ -14,7 +14,7 @@ modulator_fsk_t *modulator_fsk_create(const int srate, const int brate, const do
 	}
 	memset(f, 0, sizeof(modulator_fsk_t));
 	f->out=b;
-	f->bitlen=brate/srate;
+	f->bitlen=srate/brate;
 	f->omega_0=f0/srate*M_PI*2;
 	f->omega_1=f1/srate*M_PI*2;
 	f->samplepos=-1;
@@ -23,7 +23,7 @@ modulator_fsk_t *modulator_fsk_create(const int srate, const int brate, const do
 
 int modulate_fsk_sample(modulator_fsk_t *m, const int b)
 {
-	double v=sin(m->phi);
+	double v=sin(m->phi)*0.1;
 	if (b==0) {
 		m->phi=m->phi+m->omega_0;
 	} else {
@@ -31,7 +31,7 @@ int modulate_fsk_sample(modulator_fsk_t *m, const int b)
 	}
 	int res=buffer_write(m->out, v);
 	if (res==0) {
-		fprintf(stderr, "modulate_fsk_sample buffer_write failed %p\n", m);
+		fprintf(stderr, "modulate_fsk_sample buffer_write failed %p %d\n", m, b);
 	}
 	return res;
 }
@@ -42,9 +42,6 @@ int modulator_fsk_modulate(modulator_fsk_t *m, const int len)
 	if (m==NULL) return 0;
 	int bit=1;
 	for (int n=0; n<len; n++) {
-		if (m->samplepos>=m->bitlen) {
-			m->samplepos=-1;
-		}
 		if (m->samplepos<0) {
 			if (m->bit_wp!=m->bit_rp) {
 				m->samplepos=0;
@@ -53,6 +50,11 @@ int modulator_fsk_modulate(modulator_fsk_t *m, const int len)
 			} else {
 				bit=1; //idle state in between bits
 			}
+		}
+		if (m->samplepos>=0)
+			m->samplepos=m->samplepos+1;
+		if (m->samplepos>=m->bitlen) {
+			m->samplepos=-1;
 		}
 		int res=modulate_fsk_sample(m, bit);
 		if (res==0) {

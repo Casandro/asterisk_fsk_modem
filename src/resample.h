@@ -6,6 +6,7 @@
 typedef struct {
 	int ifactor;
 	int ofactor;
+	double last_sample;
 	buffer_t *ibuffer;
 	buffer_t *obuffer;
 } resampler_t;

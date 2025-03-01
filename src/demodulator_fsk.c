@@ -1,6 +1,7 @@
 #include "demodulator_fsk.h"
 #include "buffer.h"
 #include <syslog.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
 #include <limits.h>
@@ -34,13 +35,13 @@ double six(double x)
 	return sin(x)/x;
 }
 
-double demodulator_fsk_filter(const double *buffer, const int p, const double bandwidth, const int srate)
+double demodulator_fsk_filter(const double *buffer, const int p, const double bandwidth, const double srate)
 {
 	double sum=0;
 
 	for (int n=0; n<DEMOD_FSK_FILTER_ORDER; n++) {
-		double phi=(n-DEMOD_FSK_FILTER_ORDER/2)*bandwidth*2*M_PI/srate;
-		sum=sum+sin(phi)*buffer[(DEMOD_FSK_FILTER_ORDER-n+p)%DEMOD_FSK_FILTER_ORDER];
+		double phi=(n-DEMOD_FSK_FILTER_ORDER/2)*(bandwidth/srate)/M_PI*2;
+		sum=sum+six(phi)*buffer[(DEMOD_FSK_FILTER_ORDER-n+p)%DEMOD_FSK_FILTER_ORDER];
 	}
 	return sum;
 }
@@ -89,9 +90,10 @@ int demodulator_fsk_demod(demodulator_fsk_t *dem)
 
 		if (dem->state>=0) {
 			if (dem->state<INT_MAX-1) dem->state=dem->state+1;
-			if (dem->power_avg<10) dem->state=-1; //If the power goes below a certain point, set the state to -1 => no carrier
+			//if (dem->power_avg<10) dem->state=-1; //If the power goes below a certain point, set the state to -1 => no carrier
 		} else {
-			if (dem->power_avg>100000) dem->state=0; //If the power goes above a certain point, set the state to 0 => carrier for 0 samples
+			//if (dem->power_avg>1000) 
+			dem->state=0; //If the power goes above a certain point, set the state to 0 => carrier for 0 samples
 		}
 
 		if (dem->state<0) { //If the carrier is not on for some time (set it here) just output 1
@@ -106,15 +108,16 @@ int demodulator_fsk_demod(demodulator_fsk_t *dem)
 		//Determine derivatives
 		double i_d=dem->i_[1]-dem->i_[0];
 		double q_d=dem->q_[1]-dem->q_[0];
-		double f_=i*q_d-q*i_d;
+		double f_=dem->q_[0]*i_d - dem->i_[0]*q_d;
 		double frq=f_/power;
-		res=buffer_write(dem->out, frq);
+		res=buffer_write(dem->out, frq*1+dem->i_[1]*0);
 		if (res<1) {
 			syslog(LOG_MAKEPRI(LOG_LOCAL1, LOG_ERR), "demodulator_fsk_demod, couldn't write to %p", dem->out);
 			return res;
 		}
 	}
-	syslog(LOG_MAKEPRI(LOG_LOCAL1, LOG_DEBUG), "demodulator_fsk_demod, power %f", dem->power_avg);
+//	syslog(LOG_MAKEPRI(LOG_LOCAL1, LOG_DEBUG), "demodulator_fsk_demod, power %f", dem->power_avg);
+	fprintf(stderr, "demodulator_fsk_demod, power %f\n", dem->power_avg);
 	return 1;
 
 }
