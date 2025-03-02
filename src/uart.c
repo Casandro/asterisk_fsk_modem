@@ -8,6 +8,10 @@ uart_tx_t *uart_tx_create(const int brate, dbuffer_t *data, dbuffer_t *bits)
 		fprintf(stderr, "uart_tx create: calloc failed\n");
 		return NULL;
 	}
+	tx->in=data;
+	tx->out=bits;
+	tx->brate=brate;
+	return tx;
 }
 
 void uart_tx_free(uart_tx_t *tx)
