@@ -39,12 +39,20 @@ void test()
 	resampler_t *resampler_24k_8k=resampler_create(3, 1, modulated, modulated_8k);
 	resampler_t *resampler_8k_24k=resampler_create(1, 3, modulated_8k, modulated_upsampled);
 	modulator_fsk_t *modulator=modulator_fsk_create(24000, 1200, 1300, 2100, modulated);
-	demodulator_fsk_t *demodulator=demodulator_fsk_create(2400, modulated_upsampled, demodulated, 1300, 2100, 1500);
+	demodulator_fsk_t *demodulator=demodulator_fsk_create(24000, modulated, demodulated, 1300, 2100, 2000);
 	modulator_fsk_queue_pause(modulator, 600);
 	modulator_fsk_queue_break(modulator);
 	modulator_fsk_queue_pause(modulator, 600);
+	for (int b=0; b<16; b++) {
+		modulator_fsk_queue_pause(modulator, 20);
+		for (int n=0; n<64; n++) {
+			int bit_num=(n%4);
+			modulator_fsk_queue_bit(modulator, ((~b)>>bit_num)%2);
+		}
+	}
+	modulator_fsk_queue_pause(modulator, 300);
 	for (int n=32; n<127; n++) modulator_fsk_queue_byte(modulator, n);
-	for (int n=0; n<100; n++) {
+	for (int n=0; n<100*1024/150; n++) {
 		modulator_fsk_modulate(modulator, buffer_space(modulated));
 		resampler_resample(resampler_24k_8k);
 		resampler_resample(resampler_8k_24k);

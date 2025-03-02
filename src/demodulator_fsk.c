@@ -1,5 +1,6 @@
 #include "demodulator_fsk.h"
 #include "buffer.h"
+#include "filters.h"
 #include <syslog.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -23,28 +24,15 @@ demodulator_fsk_t *demodulator_fsk_create(const int srate, buffer_t *in, buffer_
 	dem->frq_0=frq_0;
 	dem->frq_1=frq_1;
 	dem->phi=0;
+	dem->filter_i=filter_lp_create(bandwidth, srate, 256);
+	dem->filter_q=filter_lp_create(bandwidth, srate, 256);
 	dem->bandwidth=bandwidth;
 	dem->srate=srate;
 	dem->state=-1;
+	dem->omega=(1700)*2*M_PI/dem->srate;
 	return dem;
 }
 
-double six(double x)
-{
-	if (x==0) return 1;
-	return sin(x)/x;
-}
-
-double demodulator_fsk_filter(const double *buffer, const int p, const double bandwidth, const double srate)
-{
-	double sum=0;
-
-	for (int n=0; n<DEMOD_FSK_FILTER_ORDER; n++) {
-		double phi=(n-DEMOD_FSK_FILTER_ORDER/2)*(bandwidth/srate)/M_PI*2;
-		sum=sum+six(phi)*buffer[(DEMOD_FSK_FILTER_ORDER-n+p)%DEMOD_FSK_FILTER_ORDER];
-	}
-	return sum;
-}
 
 double sqr(const double x)
 {
@@ -62,9 +50,8 @@ int demodulator_fsk_demod(demodulator_fsk_t *dem)
 		syslog(LOG_MAKEPRI(LOG_LOCAL1, LOG_WARNING), "demodulator_fsk_demod no samples to demodulate");
 		return 1; //Nothing to demodulate
 	}
+	if (no_samples>150) no_samples=150;
 	if (buffer_space(dem->out)<no_samples) no_samples=buffer_space(dem->out);
-
-	double omega=(dem->frq_0+dem->frq_1)/2*2*M_PI/dem->srate;
 
 	for (int n=0; n<no_samples; n++) {
 		double isample=0;
@@ -73,51 +60,34 @@ int demodulator_fsk_demod(demodulator_fsk_t *dem)
 			syslog(LOG_MAKEPRI(LOG_LOCAL1, LOG_ERR), "demodulator_fsk_demod, nothing to read from buffer %p", dem->in);
 			return res;
 		}
-		double i=cos(dem->phi)*isample;
-		double q=sin(dem->phi)*isample;
-		dem->phi=dem->phi+omega;
+		dem->phi=dem->phi+dem->omega;
 		if (dem->phi>2*M_PI) dem->phi=dem->phi-(2*M_PI);
-		dem->delay_pointer=(dem->delay_pointer+1) % DEMOD_FSK_FILTER_ORDER;
-		dem->delays_i[dem->delay_pointer]=i;
-		dem->delays_q[dem->delay_pointer]=q;
-		dem->i_[2]=dem->i_[1]; dem->i_[1]=dem->i_[0];
-		dem->q_[2]=dem->q_[1]; dem->q_[1]=dem->q_[0];
-		dem->i_[0]=demodulator_fsk_filter(dem->delays_i, dem->delay_pointer, dem->bandwidth, dem->srate);
-		dem->q_[0]=demodulator_fsk_filter(dem->delays_q, dem->delay_pointer, dem->bandwidth, dem->srate);
+
+		dem->i_[1]=dem->i_[0];
+		dem->q_[1]=dem->q_[0];
+		dem->i_[0]=filter_lp_filter(dem->filter_i, cos(dem->phi)*isample);
+		dem->q_[0]=filter_lp_filter(dem->filter_q, sin(dem->phi)*isample);
 
 		double power=(sqrt(sqr(dem->i_[0])+sqr(dem->q_[0]))+sqrt(sqr(dem->i_[0])+sqr(dem->q_[0])))/2;
 		dem->power_avg=(dem->power_avg*0.9999)+power*0.0001;
 
-		if (dem->state>=0) {
-			if (dem->state<INT_MAX-1) dem->state=dem->state+1;
-			//if (dem->power_avg<10) dem->state=-1; //If the power goes below a certain point, set the state to -1 => no carrier
-		} else {
-			//if (dem->power_avg>1000) 
-			dem->state=0; //If the power goes above a certain point, set the state to 0 => carrier for 0 samples
-		}
-
-		if (dem->state<0) { //If the carrier is not on for some time (set it here) just output 1
-			int res=buffer_write(dem->out, 1);
-			if (res<1) {
-				syslog(LOG_MAKEPRI(LOG_LOCAL1, LOG_ERR), "demodulator_fsk_demod, couldn't write to %p", dem->out);
-				return res;
-			}
-			continue; //Go on with next sample
-		}
 		//The carrier is on, so we can demodulate
 		//Determine derivatives
 		double i_d=dem->i_[1]-dem->i_[0];
+		double i= (dem->i_[1]+dem->i_[0])/2;
 		double q_d=dem->q_[1]-dem->q_[0];
-		double f_=dem->q_[0]*i_d - dem->i_[0]*q_d;
+		double q= (dem->q_[1]+dem->q_[0])/2;
+		double f_=q*i_d - i*q_d;
 		double frq=f_/power;
-		res=buffer_write(dem->out, frq*1+dem->i_[1]*0);
+		res=buffer_write(dem->out, frq);
 		if (res<1) {
 			syslog(LOG_MAKEPRI(LOG_LOCAL1, LOG_ERR), "demodulator_fsk_demod, couldn't write to %p", dem->out);
+			fprintf(stderr, "demodulator_fsk_demod, couldn't write to %p", dem->out);
 			return res;
 		}
 	}
 //	syslog(LOG_MAKEPRI(LOG_LOCAL1, LOG_DEBUG), "demodulator_fsk_demod, power %f", dem->power_avg);
-	fprintf(stderr, "demodulator_fsk_demod, power %f\n", dem->power_avg);
+	fprintf(stderr, "demodulator_fsk_demod, power %f %f %f\n", dem->power_avg, dem->bandwidth, dem->srate*1.0);
 	return 1;
 
 }

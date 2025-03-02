@@ -1,8 +1,9 @@
 #pragma once
 
 #include "buffer.h"
+#include "filters.h"
 
-#define DEMOD_FSK_FILTER_ORDER (1024*2)
+#define DEMOD_FSK_FILTER_ORDER (200)
 
 typedef struct {
 	buffer_t *in;
@@ -10,15 +11,16 @@ typedef struct {
 	double frq_0;
 	double frq_1;
 	double bandwidth;
+	double omega;
 	double phi;
 	int delay_pointer;
 	int srate;
 	double power_avg;
 	int state;
-	double i_[3];
-	double q_[3];
-	double delays_i[DEMOD_FSK_FILTER_ORDER];
-	double delays_q[DEMOD_FSK_FILTER_ORDER];
+	double i_[2];
+	double q_[2];
+	filter_lp_t *filter_i;
+	filter_lp_t *filter_q;
 } demodulator_fsk_t;
 
 demodulator_fsk_t *demodulator_fsk_create(const int srate, buffer_t *in, buffer_t *out, const double frq_0, const double frq_1, const double bandwidth);
