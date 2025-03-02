@@ -1,6 +1,7 @@
 #pragma once
 
 typedef struct {
+	int srate;
 	int size;
 	int read_pointer;
 	int write_pointer;
@@ -8,7 +9,7 @@ typedef struct {
 } buffer_t;
 
 
-buffer_t *buffer_create(const int length);
+buffer_t *buffer_create(const int length, const int srate);
 void buffer_free(buffer_t *b);
 
 //Returns the amount of samples we can read from the buffer

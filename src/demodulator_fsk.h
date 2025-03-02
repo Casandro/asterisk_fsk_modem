@@ -10,7 +10,7 @@ typedef struct {
 	buffer_t *out;
 	double frq_0;
 	double frq_1;
-	double bandwidth;
+	double f_factor;
 	double omega;
 	double phi;
 	int delay_pointer;
@@ -23,5 +23,6 @@ typedef struct {
 	filter_lp_t *filter_q;
 } demodulator_fsk_t;
 
-demodulator_fsk_t *demodulator_fsk_create(const int srate, buffer_t *in, buffer_t *out, const double frq_0, const double frq_1, const double bandwidth);
+demodulator_fsk_t *demodulator_fsk_create(buffer_t *in, buffer_t *out, const double frq_0, const double frq_1, const double bitrate);
+void demodulator_fsk_free(demodulator_fsk_t *dem);
 int demodulator_fsk_demod(demodulator_fsk_t *dem);

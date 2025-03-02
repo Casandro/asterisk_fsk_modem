@@ -3,7 +3,7 @@
 #include <stdio.h>
 #include <string.h>
 
-buffer_t *buffer_create(const int length)
+buffer_t *buffer_create(const int length, const int srate)
 {
 	buffer_t *b=malloc(sizeof(buffer_t));
 	if (b==NULL) {
@@ -20,6 +20,7 @@ buffer_t *buffer_create(const int length)
 	b->size=length;
 	b->read_pointer=0;
 	b->write_pointer=0;
+	b->srate=srate;
 	return b;
 }
 

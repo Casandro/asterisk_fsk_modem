@@ -40,16 +40,36 @@ filter_lp_t *filter_lp_create(const double bandwidth, const double srate, const 
 	return lp;
 }
 
-double filter_lp_filter(filter_lp_t *lp, const double input)
+void filter_lp_free(filter_lp_t *lp)
 {
-	if (lp==NULL) return 0;
+	if (lp==NULL) return;
+	if (lp->buffer!=NULL) free(lp->buffer);
+	if (lp->sinx_buffer!=NULL) free(lp->sinx_buffer);
+	free(lp);
+}
+
+void filter_lp_put(filter_lp_t *lp, const double input)
+{
+	if (lp==NULL) return;
 	lp->pointer=(lp->pointer+1)%lp->order;
 	lp->buffer[lp->pointer]=input;
+}
+
+double filter_lp_get(filter_lp_t *lp)
+{
+	if (lp==NULL) return 0;
 	double sum=0;
 	for (int n=0; n<lp->order; n++) {
 		sum=sum+lp->sinx_buffer[n]*lp->buffer[(lp->order-n+lp->pointer)%lp->order];
 	}
 	return sum;
+}
+
+double filter_lp_filter(filter_lp_t *lp, const double input)
+{
+	if (lp==NULL) return 0;
+	filter_lp_put(lp, input);
+	return filter_lp_get(lp);
 }
 
 

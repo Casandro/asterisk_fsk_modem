@@ -9,5 +9,6 @@ typedef struct {
 
 
 filter_lp_t *filter_lp_create(const double bandwidth, const double srate, const int order);
+void filter_lp_free(filter_lp_t *lp);
 double filter_lp_filter(filter_lp_t *lp, const double input);
 

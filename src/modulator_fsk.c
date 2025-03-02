@@ -5,7 +5,7 @@
 #include <string.h>
 #include <math.h>
 
-modulator_fsk_t *modulator_fsk_create(const int srate, const int brate, const double f0, const double f1, buffer_t *b)
+modulator_fsk_t *modulator_fsk_create(const int brate, const double f0, const double f1, buffer_t *b)
 {
 	modulator_fsk_t *f=malloc(sizeof(modulator_fsk_t));
 	if (f==NULL) {
@@ -14,6 +14,7 @@ modulator_fsk_t *modulator_fsk_create(const int srate, const int brate, const do
 	}
 	memset(f, 0, sizeof(modulator_fsk_t));
 	f->out=b;
+	int srate=b->srate;
 	f->bitlen=srate/brate;
 	f->omega_0=f0/srate*M_PI*2;
 	f->omega_1=f1/srate*M_PI*2;

@@ -24,7 +24,7 @@ void dump_buffer(buffer_t *b)
 			fprintf(stderr, "dump_buffer: buffer_read failed\n");
 			return;
 		}
-		printf("%d %lf\n", n, v);
+		printf("%d %10lf\n", 0, v);
 	}
 }
 
@@ -32,17 +32,20 @@ void dump_buffer(buffer_t *b)
 
 void test()
 {
-	buffer_t *modulated=buffer_create(1024);
-	buffer_t *modulated_8k=buffer_create(1024);
-	buffer_t *modulated_upsampled=buffer_create(1024);
-	buffer_t *demodulated=buffer_create(1024);
-	resampler_t *resampler_24k_8k=resampler_create(3, 1, modulated, modulated_8k);
-	resampler_t *resampler_8k_24k=resampler_create(1, 3, modulated_8k, modulated_upsampled);
-	modulator_fsk_t *modulator=modulator_fsk_create(24000, 1200, 1300, 2100, modulated);
-	demodulator_fsk_t *demodulator=demodulator_fsk_create(24000, modulated, demodulated, 1300, 2100, 2000);
-	modulator_fsk_queue_pause(modulator, 600);
+	int frq_1= 1300;
+	int frq_0=2100;
+	int brate=1200;
+	buffer_t *modulated=buffer_create(1024, 24000);
+	buffer_t *modulated_8k=buffer_create(1024, 8000);
+	buffer_t *modulated_upsampled=buffer_create(1024, 24000);
+	buffer_t *demodulated=buffer_create(1024, 24000);
+	resampler_t *resampler_24k_8k=resampler_create(modulated, modulated_8k);
+	resampler_t *resampler_8k_24k=resampler_create(modulated_8k, modulated_upsampled);
+	modulator_fsk_t *modulator=modulator_fsk_create(brate, frq_0, frq_1, modulated);
+	demodulator_fsk_t *demodulator=demodulator_fsk_create(modulated_upsampled, demodulated, frq_0, frq_1, brate);
+	modulator_fsk_queue_pause(modulator, brate/2);
 	modulator_fsk_queue_break(modulator);
-	modulator_fsk_queue_pause(modulator, 600);
+	modulator_fsk_queue_pause(modulator, brate/2);
 	for (int b=0; b<16; b++) {
 		modulator_fsk_queue_pause(modulator, 20);
 		for (int n=0; n<64; n++) {
@@ -50,9 +53,9 @@ void test()
 			modulator_fsk_queue_bit(modulator, ((~b)>>bit_num)%2);
 		}
 	}
-	modulator_fsk_queue_pause(modulator, 300);
+	modulator_fsk_queue_pause(modulator, brate/4);
 	for (int n=32; n<127; n++) modulator_fsk_queue_byte(modulator, n);
-	for (int n=0; n<100*1024/150; n++) {
+	for (int n=0; n<100*1024/1024*16; n++) {
 		modulator_fsk_modulate(modulator, buffer_space(modulated));
 		resampler_resample(resampler_24k_8k);
 		resampler_resample(resampler_8k_24k);

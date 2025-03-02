@@ -20,7 +20,7 @@ typedef struct {
 } modulator_fsk_t;
 
 
-modulator_fsk_t *modulator_fsk_create(const int srate, const int brate, const double f0, const double f1, buffer_t *b);
+modulator_fsk_t *modulator_fsk_create(const int brate, const double f0, const double f1, buffer_t *b);
 int modulator_fsk_modulate(modulator_fsk_t *m, const int len);
 int modulator_fsk_bit_num(const modulator_fsk_t *m);
 void modulator_fsk_queue_bit(modulator_fsk_t *m, const int bit);
