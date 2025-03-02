@@ -19,8 +19,22 @@ modulator_fsk_t *modulator_fsk_create(const int brate, const double f0, const do
 	f->omega_0=f0/srate*M_PI*2;
 	f->omega_1=f1/srate*M_PI*2;
 	f->samplepos=-1;
+	f->state=0;
 	return f;
 }
+
+void modulator_fsk_start(modulator_fsk_t *f)
+{
+	if (f==NULL) return;
+	f->state=1;
+}
+
+void modulator_fsk_free(modulator_fsk_t *f)
+{
+	if (f==NULL) return;
+	free(f);
+}
+
 
 int modulate_fsk_sample(modulator_fsk_t *m, const int b)
 {
@@ -44,7 +58,7 @@ int modulator_fsk_modulate(modulator_fsk_t *m, const int len)
 	if (m==NULL) return 0;
 	for (int n=0; n<len; n++) {
 		if (m->samplepos<0) {
-			if (m->bit_wp!=m->bit_rp) {
+			if ( (m->bit_wp!=m->bit_rp) && (m->state==1) ) {
 				m->samplepos=0;
 				m->bit=m->bit_buffer[m->bit_rp];
 				m->bit_rp=(m->bit_rp+1) % MODULATOR_FSK_BLEN;
@@ -103,3 +117,4 @@ void modulator_fsk_queue_pause(modulator_fsk_t *m, const int pause)
 {
 	for (int n=0; n<pause; n++) modulator_fsk_queue_bit(m, 1);
 }
+

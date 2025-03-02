@@ -42,6 +42,7 @@ void test()
 	resampler_t *resampler_24k_8k=resampler_create(modulated, modulated_8k);
 	resampler_t *resampler_8k_24k=resampler_create(modulated_8k, modulated_upsampled);
 	modulator_fsk_t *modulator=modulator_fsk_create(brate, frq_0, frq_1, modulated);
+	modulator_fsk_start(modulator);
 	demodulator_fsk_t *demodulator=demodulator_fsk_create(modulated_upsampled, demodulated, frq_0, frq_1, brate);
 	modulator_fsk_queue_pause(modulator, brate/2);
 	modulator_fsk_queue_break(modulator);

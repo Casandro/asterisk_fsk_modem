@@ -17,10 +17,15 @@ typedef struct {
 	buffer_t *out;
 	int8_t bit;
 	int8_t bit_buffer[MODULATOR_FSK_BLEN];
+	int state;
 } modulator_fsk_t;
 
 
 modulator_fsk_t *modulator_fsk_create(const int brate, const double f0, const double f1, buffer_t *b);
+void modulator_fsk_free(modulator_fsk_t *f);
+
+void modulator_fsk_start(modulator_fsk_t *f);
+
 int modulator_fsk_modulate(modulator_fsk_t *m, const int len);
 int modulator_fsk_bit_num(const modulator_fsk_t *m);
 void modulator_fsk_queue_bit(modulator_fsk_t *m, const int bit);
