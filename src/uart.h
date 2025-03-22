@@ -27,6 +27,7 @@ typedef struct {
 	int brate;
 	int state;
 	int bitlen;
+	int word;
 	buffer_t *in;
 	dbuffer_t *out;
 } uart_rx_t;
